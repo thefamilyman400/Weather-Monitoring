@@ -10,4 +10,4 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY . .
 
 # Run your app
-CMD ["python3", "backend_new.py"]
+CMD ["gunicorn", "-b", "0.0.0.0:5000", "backend_new:app"]
