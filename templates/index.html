@@ -11,28 +11,19 @@
     <h1>🌤 Weather Insight</h1>
     <p class="subtitle">Real-time weather intelligence</p>
 
-    <form id="searchForm" class="search-box">
-        <div class="input-group">
-            <input type="text" id="city" placeholder="Search city..." autocomplete="off">
-            <button type="submit">Search</button>
-        </div>
+    <div class="search-box">
+        <input type="text" id="city" placeholder="Search city...">
         <div id="suggestions"></div>
-    </form>
+        <button id="searchBtn">Search</button>
+    </div>
 
-    <!-- DASHBOARD LAYOUT -->
     <div class="dashboard">
+        <div class="card" id="weather-card"></div>
 
-        <!-- LEFT: WEATHER -->
-        <div class="card" id="weather-card">
-            <p>Loading weather...</p>
-        </div>
-
-        <!-- RIGHT: CHART -->
         <div class="chart-container">
-            <h3 class="chart-title">📊 5-Day Temperature Trend</h3>
+            <h3>📊 5-Day Trend</h3>
             <canvas id="weatherChart"></canvas>
         </div>
-
     </div>
 </div>
 

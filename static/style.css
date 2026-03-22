@@ -6,85 +6,66 @@ body {
 }
 
 .container {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    padding-top: 40px;
+    text-align: center;
+    margin-top: 40px;
 }
 
-.subtitle {
-    opacity: 0.7;
-    margin-bottom: 20px;
-}
-
-/* SEARCH */
 .search-box {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
+    position: relative;
 }
 
-.input-group {
-    display: flex;
-    gap: 10px;
-}
-
-.input-group input {
-    padding: 12px;
-    width: 260px;
-    border-radius: 8px;
+input {
+    padding: 10px;
+    width: 250px;
+    border-radius: 5px;
     border: none;
 }
 
-.input-group button {
-    padding: 12px;
-    border-radius: 8px;
+button {
+    padding: 10px;
     border: none;
     background: #38bdf8;
+    color: black;
+    border-radius: 5px;
     cursor: pointer;
 }
 
-/* DASHBOARD */
+#suggestions {
+    position: absolute;
+    top: 40px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 250px;
+    background: white;
+    color: black;
+    border-radius: 8px;
+    z-index: 1000;
+}
+
+#suggestions div {
+    padding: 8px;
+    cursor: pointer;
+}
+
+#suggestions div:hover {
+    background: #eee;
+}
+
 .dashboard {
     display: flex;
+    justify-content: center;
     gap: 30px;
     margin-top: 30px;
-    justify-content: center;
-    align-items: flex-start;
 }
 
-/* WEATHER CARD */
 .card {
-    width: 350px;
+    width: 300px;
     padding: 20px;
-    border-radius: 16px;
     background: rgba(255,255,255,0.1);
+    border-radius: 10px;
 }
 
-/* CHART */
 .chart-container {
     width: 400px;
     height: 300px;
-    padding: 15px;
-    border-radius: 16px;
-    background: rgba(255,255,255,0.08);
-}
-
-.chart-title {
-    text-align: center;
-    font-size: 14px;
-    margin-bottom: 10px;
-    opacity: 0.8;
-}
-
-.chart-container canvas {
-    width: 100% !important;
-    height: 220px !important;
-}
-
-/* GRID */
-.grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 10px;
 }

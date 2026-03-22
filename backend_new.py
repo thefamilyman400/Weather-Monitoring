@@ -13,14 +13,8 @@ API_KEY = os.getenv("OPENWEATHER_API_KEY")
 BASE_URL = "http://api.openweathermap.org/data/2.5/weather"
 
 
-# 🔧 Utility function (reuse everywhere)
 def format_weather(data):
-    timezone_offset = data["timezone"]
-    tz = pytz.FixedOffset(timezone_offset // 60)
-
-    local_time = datetime.now(tz).strftime("%Y-%m-%d %H:%M:%S")
-    sunrise = datetime.fromtimestamp(data["sys"]["sunrise"], tz).strftime("%H:%M")
-    sunset = datetime.fromtimestamp(data["sys"]["sunset"], tz).strftime("%H:%M")
+    tz = pytz.FixedOffset(data["timezone"] // 60)
 
     return {
         "city": data["name"],
@@ -31,57 +25,17 @@ def format_weather(data):
         "temp_max": data["main"]["temp_max"],
         "humidity": data["main"]["humidity"],
         "pressure": data["main"]["pressure"],
-        "visibility": data.get("visibility", "N/A"),
-        "wind_speed": data["wind"]["speed"],
-        "wind_deg": data["wind"].get("deg", "N/A"),
-        "clouds": data["clouds"]["all"],
-        "desc": data["weather"][0]["description"],
+        "desc": data["weather"][0]["description"].title(),
         "icon": data["weather"][0]["icon"],
-        "sunrise": sunrise,
-        "sunset": sunset,
-        "lat": data["coord"]["lat"],
-        "lon": data["coord"]["lon"],
-        "time": local_time
+        "time": datetime.now(tz).strftime("%d-%m-%Y %H:%M")
     }
 
 
-# 🌍 Main route
-@app.route("/", methods=["GET", "POST"])
+@app.route("/")
 def index():
-    weather = None
-
-    if request.method == "POST":
-        city = request.form.get("city")
-
-        if city:
-            url = f"{BASE_URL}?q={city}&appid={API_KEY}&units=metric"
-            data = requests.get(url).json()
-
-            if data.get("cod") == 200:
-                weather = format_weather(data)
-
-    return render_template("index.html", weather=weather)
+    return render_template("index.html")
 
 
-# 📍 Weather by coordinates (auto location)
-@app.route("/weather_by_coords")
-def weather_by_coords():
-    lat = request.args.get("lat")
-    lon = request.args.get("lon")
-
-    if not lat or not lon:
-        return jsonify({"error": "Missing coordinates"}), 400
-
-    url = f"{BASE_URL}?lat={lat}&lon={lon}&appid={API_KEY}&units=metric"
-    data = requests.get(url).json()
-
-    if data.get("cod") == 200:
-        return jsonify(format_weather(data))
-
-    return jsonify({"error": "Failed to fetch weather"}), 500
-
-
-# 🔍 Autocomplete (Geo API)
 @app.route("/autocomplete")
 def autocomplete():
     query = request.args.get("q")
@@ -105,6 +59,7 @@ def autocomplete():
 
     return jsonify(cities)
 
+
 @app.route("/weather_by_city")
 def weather_by_city():
     city = request.args.get("city")
@@ -117,6 +72,21 @@ def weather_by_city():
 
     return jsonify({"error": "City not found"}), 404
 
+
+@app.route("/weather_by_coords")
+def weather_by_coords():
+    lat = request.args.get("lat")
+    lon = request.args.get("lon")
+
+    url = f"{BASE_URL}?lat={lat}&lon={lon}&appid={API_KEY}&units=metric"
+    data = requests.get(url).json()
+
+    if data.get("cod") == 200:
+        return jsonify(format_weather(data))
+
+    return jsonify({"error": "Failed"}), 400
+
+
 @app.route("/forecast")
 def forecast():
     city = request.args.get("city")
@@ -124,22 +94,19 @@ def forecast():
     url = f"http://api.openweathermap.org/data/2.5/forecast?q={city}&appid={API_KEY}&units=metric"
     data = requests.get(url).json()
 
-    if data.get("cod") != "200":
-        return jsonify({"error": "Failed"}), 400
+    if "list" not in data:
+        return jsonify({"temps": [], "times": []})
 
     temps = []
     times = []
 
-    # take every 8th item → 24hr interval
     for i in range(0, len(data["list"]), 8):
         entry = data["list"][i]
         temps.append(entry["main"]["temp"])
         times.append(entry["dt_txt"])
 
-    return jsonify({
-        "temps": temps,
-        "times": times
-    })
+    return jsonify({"temps": temps, "times": times})
+
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000)
+    app.run(debug=True)

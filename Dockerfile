@@ -11,4 +11,4 @@ COPY . .
 
 EXPOSE 80
 # Run your app
-CMD ["gunicorn", "-b", "0.0.0.0:80", "backend_new:app"]
+CMD ["gunicorn", "-b", "0.0.0.0:5000", "backend_new:app"]
