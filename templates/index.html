@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Weather Insight</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+
+<div class="container">
+    <h1>🌤 Weather Insight</h1>
+    <p class="subtitle">Real-time weather intelligence</p>
+
+    <form id="searchForm" class="search-box">
+        <div class="input-group">
+            <input type="text" id="city" placeholder="Search city..." autocomplete="off">
+            <button type="submit">Search</button>
+        </div>
+        <div id="suggestions"></div>
+    </form>
+
+    <!-- DASHBOARD LAYOUT -->
+    <div class="dashboard">
+
+        <!-- LEFT: WEATHER -->
+        <div class="card" id="weather-card">
+            <p>Loading weather...</p>
+        </div>
+
+        <!-- RIGHT: CHART -->
+        <div class="chart-container">
+            <h3 class="chart-title">📊 5-Day Temperature Trend</h3>
+            <canvas id="weatherChart"></canvas>
+        </div>
+
+    </div>
+</div>
+
+<script src="/static/script.js"></script>
+
+</body>
+</html>

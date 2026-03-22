@@ -1,78 +1,145 @@
-from flask import Flask, render_template
+from flask import Flask, render_template, request, jsonify
 import requests
+from datetime import datetime
+import pytz
 import os
-import datetime
 from dotenv import load_dotenv
 
 load_dotenv()
+
 app = Flask(__name__)
 
-@app.route("/api/debug")
-def debug():
+API_KEY = os.getenv("OPENWEATHER_API_KEY")
+BASE_URL = "http://api.openweathermap.org/data/2.5/weather"
+
+
+# 🔧 Utility function (reuse everywhere)
+def format_weather(data):
+    timezone_offset = data["timezone"]
+    tz = pytz.FixedOffset(timezone_offset // 60)
+
+    local_time = datetime.now(tz).strftime("%Y-%m-%d %H:%M:%S")
+    sunrise = datetime.fromtimestamp(data["sys"]["sunrise"], tz).strftime("%H:%M")
+    sunset = datetime.fromtimestamp(data["sys"]["sunset"], tz).strftime("%H:%M")
+
     return {
-        "api_key_present": bool(os.getenv("API_KEY")),
-        "lat": os.getenv("LAT", "12.97"),
-        "lon": os.getenv("LON", "77.59")
+        "city": data["name"],
+        "country": data["sys"]["country"],
+        "temp": data["main"]["temp"],
+        "feels_like": data["main"]["feels_like"],
+        "temp_min": data["main"]["temp_min"],
+        "temp_max": data["main"]["temp_max"],
+        "humidity": data["main"]["humidity"],
+        "pressure": data["main"]["pressure"],
+        "visibility": data.get("visibility", "N/A"),
+        "wind_speed": data["wind"]["speed"],
+        "wind_deg": data["wind"].get("deg", "N/A"),
+        "clouds": data["clouds"]["all"],
+        "desc": data["weather"][0]["description"],
+        "icon": data["weather"][0]["icon"],
+        "sunrise": sunrise,
+        "sunset": sunset,
+        "lat": data["coord"]["lat"],
+        "lon": data["coord"]["lon"],
+        "time": local_time
     }
 
-def get_sensor_data():
-    api_key = os.getenv("API_KEY")
-    lat = os.getenv("LAT", "12.97")
-    lon = os.getenv("LON", "77.59")
 
-    if not api_key:
-        return {"error": "API_KEY not set"}
+# 🌍 Main route
+@app.route("/", methods=["GET", "POST"])
+def index():
+    weather = None
 
-    weather_url = f"https://api.weatherbit.io/v2.0/current?lat={lat}&lon={lon}&key={api_key}"
+    if request.method == "POST":
+        city = request.form.get("city")
 
-    try:
-        # 🌦 WEATHER DATA
-        weather_res = requests.get(weather_url, timeout=5)
-        weather_res.raise_for_status()
-        weather_json = weather_res.json()
+        if city:
+            url = f"{BASE_URL}?q={city}&appid={API_KEY}&units=metric"
+            data = requests.get(url).json()
 
-        weather_data = weather_json["data"][0]
+            if data.get("cod") == 200:
+                weather = format_weather(data)
 
-        return {
-            "timestamp": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-            "city": weather_data.get("city_name"),
+    return render_template("index.html", weather=weather)
 
-            # 🌡 Temperature
-            "temperature": weather_data.get("temp"),
-            "feels_like": weather_data.get("app_temp"),
-            "dew_point": weather_data.get("dewpt"),
 
-            # 💧 Humidity
-            "humidity": weather_data.get("rh"),
+# 📍 Weather by coordinates (auto location)
+@app.route("/weather_by_coords")
+def weather_by_coords():
+    lat = request.args.get("lat")
+    lon = request.args.get("lon")
 
-            # 🌬 Pressure & Wind
-            "pressure": weather_data.get("pres"),
-            "wind_speed": weather_data.get("wind_spd"),
-            "wind_direction": weather_data.get("wind_cdir_full"),
+    if not lat or not lon:
+        return jsonify({"error": "Missing coordinates"}), 400
 
-            # ☁ Clouds & Conditions
-            "clouds": weather_data.get("clouds"),
-            "weather": weather_data.get("weather", {}).get("description"),
+    url = f"{BASE_URL}?lat={lat}&lon={lon}&appid={API_KEY}&units=metric"
+    data = requests.get(url).json()
 
-            # 🌧 Rain / Snow
-            "precipitation": weather_data.get("precip"),
-            "snowfall": weather_data.get("snow"),
+    if data.get("cod") == 200:
+        return jsonify(format_weather(data))
 
-            # 👁 Visibility
-            "visibility": weather_data.get("vis"),
+    return jsonify({"error": "Failed to fetch weather"}), 500
 
-            # ☀ Solar & UV
-            "solar_radiation": weather_data.get("solar_rad"),
-            "uv_index": weather_data.get("uv"),
-        }
 
-    except requests.exceptions.RequestException as e:
-        return {"error": str(e)}
+# 🔍 Autocomplete (Geo API)
+@app.route("/autocomplete")
+def autocomplete():
+    query = request.args.get("q")
 
-@app.route("/")
-def dashboard():
-    data = get_sensor_data()
-    return render_template("dashboard.html", data=data)
+    if not query:
+        return jsonify([])
+
+    url = f"http://api.openweathermap.org/geo/1.0/direct?q={query}&limit=5&appid={API_KEY}"
+    data = requests.get(url).json()
+
+    cities = []
+    for item in data:
+        name = item["name"]
+        state = item.get("state")
+        country = item["country"]
+
+        if state:
+            cities.append(f"{name}, {state}, {country}")
+        else:
+            cities.append(f"{name}, {country}")
+
+    return jsonify(cities)
+
+@app.route("/weather_by_city")
+def weather_by_city():
+    city = request.args.get("city")
+
+    url = f"{BASE_URL}?q={city}&appid={API_KEY}&units=metric"
+    data = requests.get(url).json()
+
+    if data.get("cod") == 200:
+        return jsonify(format_weather(data))
+
+    return jsonify({"error": "City not found"}), 404
+
+@app.route("/forecast")
+def forecast():
+    city = request.args.get("city")
+
+    url = f"http://api.openweathermap.org/data/2.5/forecast?q={city}&appid={API_KEY}&units=metric"
+    data = requests.get(url).json()
+
+    if data.get("cod") != "200":
+        return jsonify({"error": "Failed"}), 400
+
+    temps = []
+    times = []
+
+    # take every 8th item → 24hr interval
+    for i in range(0, len(data["list"]), 8):
+        entry = data["list"][i]
+        temps.append(entry["main"]["temp"])
+        times.append(entry["dt_txt"])
+
+    return jsonify({
+        "temps": temps,
+        "times": times
+    })
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000, debug=True)
+    app.run(host="0.0.0.0", port=5000)
